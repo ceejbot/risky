@@ -67,11 +67,11 @@ class Risky
     @bucket_name = name.to_s
   end
 
-  # Casts data to appropriate types for values.
+  # Casts data to appropriate types for attributes.
   def self.cast(data)
     casted = {}
     data.each do |k, v|
-      c = @values[k][:class] rescue nil
+      c = @attributes[k][:class] rescue nil
       casted[k] = begin
         if c == Time
           Time.iso8601(v)
@@ -85,7 +85,7 @@ class Risky
     casted
   end
 
-  # Counts the number of values in the bucket via key streaming
+  # Counts the number of attributes in the bucket via key streaming
   def self.count
     count = 0
     bucket.keys do |keys|
@@ -270,14 +270,14 @@ class Risky
     @riak = client
   end
  
-  # Add a new value to this model. Values aren't necessary; you can 
+  # Add a new attribute to this model. Attributes aren't necessary; you can 
   # use Risky#[], but if you would like to cast values to/from JSON or
   # specify defaults, you may: 
   # 
   # :default => object (#clone is called for each new instance)
   # :class => Time, Integer, etc. Inferred from default.class if present.
-  def self.value(value, opts = {})
-    value = value.to_s
+  def self.attribute(attribute, opts = {})
+    attribute = attribute.to_s
 
     klass = if opts[:class]
       opts[:class]
@@ -286,22 +286,22 @@ class Risky
     else
       nil
     end
-    values[value] = opts.merge(:class => klass)
+    attributes[attribute] = opts.merge(:class => klass)
     
     class_eval "
-      def #{value}; @values[#{value.inspect}]; end
-      def #{value}=(value); @values[#{value.inspect}] = value; end
+      def #{attribute}; @attributes[#{attribute.inspect}]; end
+      def #{attribute}=(attribute); @attributes[#{attribute.inspect}] = attribute; end
     "
   end
 
-  # A list of all values we track.
-  def self.values
-    @values ||= {}
+  # A list of all attributes we track.
+  def self.attributes
+    @attributes ||= {}
   end
 
 
 
-  attr_accessor :values
+  attr_accessor :attributes
   attr_accessor :riak_object
 
   # Create a new instance from a key and a list of values.
@@ -321,9 +321,9 @@ class Risky
 
     @new = true
     @merged = false
-    @values = {}
+    @attributes = {}
 
-    # Load values
+    # Load attributes
     values.each do |k,v|
       begin
         send(k.to_s + '=', v)
@@ -333,7 +333,7 @@ class Risky
     end
 
     # Fill in defults.
-    self.class.values.each do |k,v|
+    self.class.attributes.each do |k,v|
       if self[k].nil?
         self[k] = (v[:default].clone rescue v[:default])
       end
@@ -345,14 +345,14 @@ class Risky
     o.class == self.class and o.key.to_s == self.key.to_s rescue false
   end
 
-  # Access the values hash.
+  # Access the attributes hash.
   def [](k)
-    @values[k]
+    @attributes[k]
   end
 
-  # Access the values hash.
+  # Access the attributes hash.
   def []=(k, v)
-    @values[k] = v
+    @attributes[k] = v
   end
 
   def after_create
@@ -369,7 +369,7 @@ class Risky
   end
 
   def as_json(opts = {})
-    h = @values.merge(:key => key)
+    h = @attributes.merge(:key => key)
     h[:errors] = errors unless errors.empty?
     h 
   end
@@ -418,10 +418,10 @@ class Risky
       self.merged = true
     else
       # Not merging
-      self.values = self.class.cast(MultiJson.decode(riak_object.raw_data)) rescue {}
-      self.class.values.each do |k, v|
-        if values[k].nil?
-          values[k] = (v[:default].clone rescue v[:default])
+      self.attributes = self.class.cast(MultiJson.decode(riak_object.raw_data)) rescue {}
+      self.class.attributes.each do |k, v|
+        if attributes[k].nil?
+          attributes[k] = (v[:default].clone rescue v[:default])
         end
       end
       self.riak_object = riak_object
@@ -433,7 +433,7 @@ class Risky
   end
 
   def inspect
-    "#<#{self.class} #{key} #{@values.inspect}>"
+    "#<#{self.class} #{key} #{@attributes.inspect}>"
   end
 
   def key=(key)
@@ -484,7 +484,7 @@ class Risky
   # 
   # Calls #validate and #valid? unless :validate is false.
   #
-  # Converts @values to_json and saves it to riak.
+  # Converts @attributes to_json and saves it to riak.
   #
   # :w and :dw are also supported.
   def save(opts = {})
@@ -495,7 +495,7 @@ class Risky
       return false unless valid?
     end
 
-    @riak_object.raw_data = MultiJson.encode @values
+    @riak_object.raw_data = MultiJson.encode @attributes
 	  @riak_object.content_type = "application/json"
     
     store_opts = {}

@@ -1,7 +1,7 @@
 class Crud < Risky
   bucket 'crud'
 
-  value :value
+  attribute :value
 end
 
 describe 'CRUD' do

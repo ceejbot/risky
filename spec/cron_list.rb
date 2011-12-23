@@ -3,7 +3,7 @@ class Item < Risky
 
   bucket 'items'
 
-  value :v
+  attribute :v
 end
 
 class CronList < Risky

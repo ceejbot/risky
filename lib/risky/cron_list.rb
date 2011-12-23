@@ -39,7 +39,7 @@ module Risky::CronList
   end
 
   def self.included(base)
-    base.value :items, :default => []
+    base.attribute :items, :default => []
     base.extend ClassMethods
   end
 

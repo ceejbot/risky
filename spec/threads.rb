@@ -2,13 +2,13 @@ Risky.riak = proc { Riak::Client.new(:host => '127.0.0.1') }
 
 class Crud < Risky
   bucket 'crud'
-  value :value
+  attribute :value
 end
 
 class Concurrent < Risky
   bucket 'concurrent'
   allow_mult
-  value :v
+  attribute :v
 
   # Merge value v together as a list
   def self.merge(versions)

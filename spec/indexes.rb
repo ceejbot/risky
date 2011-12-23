@@ -4,8 +4,8 @@ class Indexed < Risky
   self.riak = lambda { |k| Riak::Client.new(:host => '127.0.0.1', :protocol => 'pbc') }
   
   bucket 'indexes'
-  value :value
-  value :unique
+  attribute :value
+  attribute :unique
 
   index :value
   index :unique, :unique => true

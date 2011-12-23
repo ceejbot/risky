@@ -1,7 +1,7 @@
 $:.unshift(File.join(File.dirname(__FILE__), 'lib'))
 
 require 'rubygems'
-require 'rake/gempackagetask'
+require 'rubygems/package_task'
 require 'rake/rdoctask'
 require 'risky/version'
 require 'find'
@@ -32,7 +32,7 @@ gemspec = Gem::Specification.new do |s|
   s.add_dependency('riak-client', '~> 1.0.0.beta')
 end
  
-Rake::GemPackageTask.new(gemspec) do |p|
+Gem::PackageTask.new(gemspec) do |p|
   p.need_tar_gz = true
 end
  

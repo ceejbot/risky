@@ -9,13 +9,13 @@ class Multi < Risky
 
   include Risky::Resolver
 
-  value :users, :default => []
-  value :union, :resolve => :union
-  value :intersection, :resolve => Risky::Resolver::Resolvers.method(:intersection)
-  value :max, :resolve => :max
-  value :min, :resolve => :min
-  value :merge, :resolve => :merge
-  value :custom, :resolve => lambda { |xs|
+  attribute :users, :default => []
+  attribute :union, :resolve => :union
+  attribute :intersection, :resolve => Risky::Resolver::Resolvers.method(:intersection)
+  attribute :max, :resolve => :max
+  attribute :min, :resolve => :min
+  attribute :merge, :resolve => :merge
+  attribute :custom, :resolve => lambda { |xs|
     :custom
   }
   

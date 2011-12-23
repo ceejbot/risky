@@ -1,5 +1,5 @@
 class User < Risky
-  value :admin, :default => false
+  attribute :admin, :default => false
   bucket 'users'
 end
 

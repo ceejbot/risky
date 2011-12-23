@@ -12,7 +12,7 @@ module Risky::Resolver
      
       # For each field, use the given resolver to merge all the conflicting
       # values together.
-      values.each do |value, opts|
+      attributes.each do |value, opts|
         next unless resolver = opts[:resolve]
 
         # Convert symbols and such to callables.
