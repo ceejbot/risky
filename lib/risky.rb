@@ -299,6 +299,23 @@ class Risky
     @attributes ||= {}
   end
 
+  # Adds a 'reference' keyword
+  # This property is a member of a specific class that can be looked up
+  # with the ClassName[id] syntax. Usage:
+  # reference :name, ClassOfReference
+  def self.reference(reference, klass, opts = {})
+  	reference = reference.to_s
+  	if klass.nil?
+      throw :reference_class_nil
+    end
+    
+    class_eval "
+      def #{reference}_id; @attributes['#{reference}_id']; end
+      def #{reference}_id=(attr_id); @attributes['#{reference}_id'] = attr_id; end
+      def #{reference}; @#{reference} ||= #{klass.name}[self.#{reference}_id]; end
+      def #{reference}=(ref); self.#{reference}_id = ref.id;  @#{reference} = ref; end
+    "
+  end
 
 
   attr_accessor :attributes
