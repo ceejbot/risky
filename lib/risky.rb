@@ -317,6 +317,21 @@ class Risky
     "
   end
 
+  # Adds a 'specref' keyword
+  # specref :name
+  # We are now well into the realm of app-specific patching.
+  def self.specref(reference)
+  	reference = reference.to_s
+    class_eval "
+      def #{reference}_spec; @attributes['#{reference}_spec']; end
+      def #{reference}_spec=(attr_spec); @attributes['#{reference}_spec'] = attr_spec; end
+      def #{reference}; @#{reference} ||= KeyHandler::objectFromSpec(self.#{reference}_spec); end
+      def #{reference}=(ref); 
+      	self.#{reference}_spec = KeyHandler::makeObjectSpec(ref);  
+      	@#{reference} = ref; 
+      end
+    "
+  end
 
   attr_accessor :attributes
   attr_accessor :riak_object
