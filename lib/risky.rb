@@ -19,6 +19,42 @@ class Risky
 
   extend Enumerable
 
+	# Wraps a model name for lazy evaluation. Thank you, Ohm.
+	class Wrapper < BasicObject
+		def initialize(name, &block)
+			@name = name
+			@caller = ::Kernel.caller[2]
+			@block = block
+	
+			class << self
+				def method_missing(method_id, *args)
+					::Kernel.raise(
+						::NoMethodError,
+						"You tried to call %s#%s, but %s is not defined on %s" % [
+							@name, method_id, @name, @caller
+						]
+					)
+				end
+			end
+		end
+	
+		def self.wrap(object)
+			object.class == self ? object : new(object.inspect) { object }
+		end
+	
+		def unwrap
+			@block.call
+		end
+	
+		def class
+			Wrapper
+		end
+	
+		def inspect
+			"<Wrapper for #{@name} (in #{@caller})>"
+		end
+	end
+
   # Get a model by key. Returns nil if not found. You can also pass opts to
   # #reload (e.g. :r, :merge => false).
   def self.[](key, opts = {})
@@ -299,39 +335,44 @@ class Risky
     @attributes ||= {}
   end
 
-  # Adds a 'reference' keyword
-  # This property is a member of a specific class that can be looked up
-  # with the ClassName[id] syntax. Usage:
-  # reference :name, 'ClassOfReference'
-  def self.reference(reference, klass, opts = {})
-  	reference = reference.to_s
-  	if klass.nil?
-      throw :reference_class_nil
-    end
-    
-    class_eval "
-      def #{reference}_id; @attributes['#{reference}_id']; end
-      def #{reference}_id=(attr_id); @attributes['#{reference}_id'] = attr_id; end
-      def #{reference}; @#{reference} ||= #{klass}[self.#{reference}_id]; end
-      def #{reference}=(ref); self.#{reference}_id = ref.id;  @#{reference} = ref; end
-    "
-  end
+	def self.define_memoized_method(name, &block)
+		define_method(name) do
+			@_memo[name] ||= instance_eval(&block)
+		end
+	end
 
-  # Adds a 'specref' keyword
-  # specref :name
-  # We are now well into the realm of app-specific patching.
-  def self.specref(reference)
-  	reference = reference.to_s
-    class_eval "
-      def #{reference}_spec; @attributes['#{reference}_spec']; end
-      def #{reference}_spec=(attr_spec); @attributes['#{reference}_spec'] = attr_spec; end
-      def #{reference}; @#{reference} ||= KeyHandler::objectFromSpec(self.#{reference}_spec); end
-      def #{reference}=(ref); 
-      	self.#{reference}_spec = KeyHandler::makeObjectSpec(ref);  
-      	@#{reference} = ref; 
-      end
-    "
-  end
+	# Adds a 'reference' keyword
+	# This property is a member of a specific class that can be looked up
+	# with the ClassName[id] syntax. Usage:
+	# reference :name, ClassOfReference
+	def self.reference(reference, klass, opts = {})
+		reference = reference.to_s
+		if klass.nil?
+			throw :reference_class_nil
+		end
+		klass = Wrapper.wrap(klass)
+		
+		reader = :"#{reference}_id"
+		writer = :"#{reference}_id="
+		
+		define_memoized_method(reference) do
+			klass.unwrap[send(reader)]
+		end
+
+		define_method(:"#{reference}=") do |value|
+			@_memo.delete(reference)
+			@_memo[reference] = value
+			send(writer, value ? value.id : nil)
+		end
+
+		define_method(reader) do
+			@attributes["#{reference}_id"]
+		end
+
+		define_method(writer) do |value|
+			@attributes["#{reference}_id"] = value
+		end
+	end
 
   attr_accessor :attributes
   attr_accessor :riak_object
@@ -354,6 +395,7 @@ class Risky
     @new = true
     @merged = false
     @attributes = {}
+    @_memo = {}
 
     # Load attributes
     values.each do |k,v|
@@ -475,6 +517,7 @@ class Risky
       @riak_object.key = key.to_s
     end 
   end
+  alias :id= :key=
 
   def key
     @riak_object.key
