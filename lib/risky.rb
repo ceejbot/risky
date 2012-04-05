@@ -19,41 +19,41 @@ class Risky
 
   extend Enumerable
 
-	# Wraps a model name for lazy evaluation. Thank you, Ohm.
-	class Wrapper < BasicObject
-		def initialize(name, &block)
-			@name = name
-			@caller = ::Kernel.caller[2]
-			@block = block
-	
-			class << self
-				def method_missing(method_id, *args)
-					::Kernel.raise(
-						::NoMethodError,
-						"You tried to call %s#%s, but %s is not defined on %s" % [
-							@name, method_id, @name, @caller
-						]
-					)
-				end
-			end
-		end
-	
-		def self.wrap(object)
-			object.class == self ? object : new(object.inspect) { object }
-		end
-	
-		def unwrap
-			@block.call
-		end
-	
-		def class
-			Wrapper
-		end
-	
-		def inspect
-			"<Wrapper for #{@name} (in #{@caller})>"
-		end
-	end
+  # Wraps a model name for lazy evaluation. Thank you, Ohm.
+  class Wrapper < BasicObject
+    def initialize(name, &block)
+      @name = name
+      @caller = ::Kernel.caller[2]
+      @block = block
+  
+      class << self
+        def method_missing(method_id, *args)
+          ::Kernel.raise(
+            ::NoMethodError,
+            "You tried to call %s#%s, but %s is not defined on %s" % [
+              @name, method_id, @name, @caller
+            ]
+          )
+        end
+      end
+    end
+  
+    def self.wrap(object)
+      object.class == self ? object : new(object.inspect) { object }
+    end
+  
+    def unwrap
+      @block.call
+    end
+  
+    def class
+      Wrapper
+    end
+  
+    def inspect
+      "<Wrapper for #{@name} (in #{@caller})>"
+    end
+  end
 
   # Get a model by key. Returns nil if not found. You can also pass opts to
   # #reload (e.g. :r, :merge => false).
@@ -191,26 +191,25 @@ class Risky
   # Establishes methods for manipulating a single link with a given tag.
   def self.link(tag)
     tag = tag.to_s
-    class_eval "
-      def #{tag}
-        begin
-          @riak_object.links.find do |l|
-            l.tag == #{tag.inspect}
-          end.key
-        rescue NoMethodError
-          nil
-        end
+    
+    define_method(:"#{tag}") do
+      begin
+        @riak_object.links.find do |l|
+          l.tag == tag
+        end.key
+      rescue NoMethodError
+        return nil
       end
+    end
 
-      def #{tag}=(link)
-        @riak_object.links.reject! do |l|
-          l.tag == #{tag.inspect}
-        end
-        if link
-          @riak_object.links << link.to_link(#{tag.inspect})
-        end
+    define_method(:"#{tag}=") do |link|
+      @riak_object.links.reject! do |l|
+        l.tag == tag
       end
-    "
+      if link
+        @riak_object.links << link.to_link(tag)
+      end
+    end
   end
 
   # Establishes methods for manipulating a set of links with a given tag.
@@ -335,44 +334,44 @@ class Risky
     @attributes ||= {}
   end
 
-	def self.define_memoized_method(name, &block)
-		define_method(name) do
-			@_memo[name] ||= instance_eval(&block)
-		end
-	end
+  def self.define_memoized_method(name, &block)
+    define_method(name) do
+      @_memo[name] ||= instance_eval(&block)
+    end
+  end
 
-	# Adds a 'reference' keyword
-	# This property is a member of a specific class that can be looked up
-	# with the ClassName[id] syntax. Usage:
-	# reference :name, ClassOfReference
-	def self.reference(reference, klass, opts = {})
-		reference = reference.to_s
-		if klass.nil?
-			throw :reference_class_nil
-		end
-		klass = Wrapper.wrap(klass)
-		
-		reader = :"#{reference}_id"
-		writer = :"#{reference}_id="
-		
-		define_memoized_method(reference) do
-			klass.unwrap[send(reader)]
-		end
+  # Adds a 'reference' keyword
+  # This property is a member of a specific class that can be looked up
+  # with the ClassName[id] syntax. Usage:
+  # reference :name, ClassOfReference
+  def self.reference(reference, klass, opts = {})
+    reference = reference.to_s
+    if klass.nil?
+      throw :reference_class_nil
+    end
+    klass = Wrapper.wrap(klass)
+    
+    reader = :"#{reference}_id"
+    writer = :"#{reference}_id="
+    
+    define_memoized_method(reference) do
+      klass.unwrap[send(reader)]
+    end
 
-		define_method(:"#{reference}=") do |value|
-			@_memo.delete(reference)
-			@_memo[reference] = value
-			send(writer, value ? value.id : nil)
-		end
+    define_method(:"#{reference}=") do |value|
+      @_memo.delete(reference)
+      @_memo[reference] = value
+      send(writer, value ? value.id : nil)
+    end
 
-		define_method(reader) do
-			@attributes["#{reference}_id"]
-		end
+    define_method(reader) do
+      @attributes["#{reference}_id"]
+    end
 
-		define_method(writer) do |value|
-			@attributes["#{reference}_id"] = value
-		end
-	end
+    define_method(writer) do |value|
+      @attributes["#{reference}_id"] = value
+    end
+  end
 
   attr_accessor :attributes
   attr_accessor :riak_object
@@ -572,7 +571,7 @@ class Risky
     end
 
     @riak_object.raw_data = MultiJson.encode @attributes
-	  @riak_object.content_type = "application/json"
+    @riak_object.content_type = "application/json"
     
     store_opts = {}
     store_opts[:w] = opts[:w] if opts[:w]

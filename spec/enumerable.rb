@@ -1,5 +1,5 @@
 class Enum < Risky
-  bucket 'enum'
+  bucket '_test_enum'
 end
 
 describe 'Enumerable' do
@@ -37,5 +37,10 @@ describe 'Enumerable' do
     Enum.inject(0) do |count, obj|
       count + obj.key.size
     end.should == @keys.join('').size
+  end
+
+  should "clean up after itself" do
+    Enum.each { |x| x.delete }
+    Enum.count.should == 3
   end
 end

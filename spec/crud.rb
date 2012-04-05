@@ -1,5 +1,5 @@
 class Crud < Risky
-  bucket 'crud'
+  bucket '_test_crud'
 
   attribute :value
 end
@@ -55,5 +55,10 @@ describe 'CRUD' do
     b = Crud.new('superstition', 'value' => 'warlocks')
     a.should === b
     a.should.not == b
+  end
+
+  should "clean up after itself" do
+    Crud.each { |x| x.delete }
+    Crud.count.should == 3
   end
 end

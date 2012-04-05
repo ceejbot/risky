@@ -4,7 +4,7 @@ require 'pp'
 Thread.abort_on_exception = true
 
 class Multi < Risky
-  bucket :mult
+  bucket :_test_mult
   allow_mult
 
   include Risky::Resolver
@@ -78,4 +78,9 @@ describe Risky::Resolver do
   test 'max', [nil, nil], nil
   test 'max', [nil, 4], 4
   test 'custom', ['a', 'b', 'c'], :custom
+
+  should "clean up after itself" do
+    Multi.each { |x| x.delete }
+	Multi.count.should == 10
+  end
 end

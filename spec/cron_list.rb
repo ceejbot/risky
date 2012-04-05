@@ -1,7 +1,7 @@
 class Item < Risky
-  self.riak = lambda { |k| Riak::Client.new(:host => '127.0.0.1', :protocol => 'pbc') }
+  self.riak = lambda { |k| Riak::Client.new(:host => '10.0.0.14', :protocol => 'pbc') }
 
-  bucket 'items'
+  bucket '_test_items'
 
   attribute :v
 end
@@ -9,9 +9,9 @@ end
 class CronList < Risky
   include Risky::CronList
 
-  self.riak = lambda { |k| Riak::Client.new(:host => '127.0.0.1', :protocol => 'pbc') }
+  self.riak = lambda { |k| Riak::Client.new(:host => '10.0.0.14', :protocol => 'pbc') }
   
-  bucket 'cron_list'
+  bucket '_test_cron_list'
   item_class Item
   limit 5
 end
@@ -47,4 +47,10 @@ describe Risky::CronList do
       Item[k].v
     }.sort.should == (5...10).to_a
   end
+
+  should "clean up after itself" do
+    CronList.each { |x| x.delete }
+    CronList.count.should == 1
+  end
+
 end

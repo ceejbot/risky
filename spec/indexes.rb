@@ -1,9 +1,9 @@
 class Indexed < Risky
   include Risky::Indexes
 
-  self.riak = lambda { |k| Riak::Client.new(:host => '127.0.0.1', :protocol => 'pbc') }
+  self.riak = lambda { |k| Riak::Client.new(:host => '10.0.0.14', :protocol => 'pbc') }
   
-  bucket 'indexes'
+  bucket '_test_indexes'
   attribute :value
   attribute :unique
 
@@ -30,4 +30,10 @@ describe 'indexes' do
     o2.save.should.be.false
     o2.errors[:unique].should == 'taken'
   end
+
+  should "clean up after itself" do
+    Indexed.count.should == 2
+    Indexed.each { |x| x.delete }
+  end
+
 end

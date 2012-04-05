@@ -1,12 +1,12 @@
 Risky.riak = proc { Riak::Client.new(:host => '127.0.0.1') }
 
 class Crud < Risky
-  bucket 'crud'
+  bucket '_test_crud'
   attribute :value
 end
 
 class Concurrent < Risky
-  bucket 'concurrent'
+  bucket '_test_concurrent'
   allow_mult
   attribute :v
 
@@ -49,4 +49,10 @@ describe 'Threads' do
     final = Concurrent['c', {:r => :all}]
     final.v.compact.sort.should == (0...workers).to_a
   end
+
+	should "clean up after itself" do
+		# this goes in an after block but bacon doesn't have them?
+		Concurrent.each { |x| x.delete }
+		Concurrent.count.should == 1
+	end
 end

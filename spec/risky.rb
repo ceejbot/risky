@@ -1,6 +1,6 @@
 class User < Risky
   attribute :admin, :default => false
-  bucket 'users'
+  bucket '_test_users'
 end
 
 describe 'Risky' do
@@ -15,5 +15,10 @@ describe 'Risky' do
     u2 = User['test']
     u.key.should == 'test'
     u.admin.should == true
+  end
+
+  should "clean up after itself" do
+    User.count.should == 1
+    User.each { |x| x.delete }
   end
 end
